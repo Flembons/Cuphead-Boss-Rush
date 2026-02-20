@@ -18,12 +18,13 @@ namespace HelluvaRush
         {
             On.ShmupTutorialExitSign.go_cr += go_cr;
             On.HouseLevelTutorial.go_cr += go_cr;
+            On.TutorialLevelDoor.go_cr += go_cr;
             On.AbstractLevelInteractiveEntity.FixedUpdate += FixedUpdate;
             On.AbstractLevelInteractiveEntity.Show += Show;
             On.AbstractLevelInteractiveEntity.Awake += Awake;
         }
 
-        // Altered the exit of the Tutorial to load the next boss rush boss if it is active
+        // Altered the exit of the Plane Tutorial to load the next boss rush boss if it is active
         private IEnumerator go_cr(On.ShmupTutorialExitSign.orig_go_cr orig, ShmupTutorialExitSign self)
         {
             self.activated = true;
@@ -53,6 +54,62 @@ namespace HelluvaRush
             else
             {
                 SceneLoader.LoadScene(Scenes.scene_map_world_1, SceneLoader.Transition.Iris, SceneLoader.Transition.Iris, SceneLoader.Icon.Hourglass, null);
+            }
+            yield break;
+        }
+
+        // Altered the exit of the Chalice Tutorial to load the next boss rush boss if it is active
+        private IEnumerator go_cr(On.TutorialLevelDoor.orig_go_cr orig, TutorialLevelDoor self)
+        {
+            self.activated = true;
+            LevelCoin.OnLevelComplete();
+            if (self.isChaliceTutorial)
+            {
+                PlayerData.Data.IsChaliceTutorialCompleted = true;
+            }
+            else
+            {
+                PlayerData.Data.IsTutorialCompleted = true;
+            }
+            PlayerData.SaveCurrentFile();
+            foreach (AbstractPlayerController abstractPlayerController in PlayerManager.GetAllPlayers())
+            {
+                LevelPlayerController levelPlayerController = (LevelPlayerController)abstractPlayerController;
+                if (!(levelPlayerController == null))
+                {
+                    levelPlayerController.DisableInput();
+                    levelPlayerController.PauseAll();
+                }
+            }
+            TutorialLevel level = Level.Current as TutorialLevel;
+            if (level)
+            {
+                level.GoBackToHouse();
+            }
+            else
+            {
+                ChaliceTutorialLevel chaliceTutorialLevel = Level.Current as ChaliceTutorialLevel;
+                if (chaliceTutorialLevel)
+                {
+                    chaliceTutorialLevel.Exit();
+                }
+            }
+            yield return CupheadTime.WaitForSeconds(self, 0.2f);
+            if (self.isChaliceTutorial)
+            {
+                if (BossRushManager.inBossRush)
+                {
+                    BossRushManager.bossesDefeated--;
+                    BossRushManager.loadNextBossRushLevel();
+                }
+                else
+                {
+                    SceneLoader.LoadScene(Scenes.scene_map_world_DLC, SceneLoader.Transition.Iris, SceneLoader.Transition.Iris, SceneLoader.Icon.Hourglass, null);
+                }
+            }
+            else
+            {
+                SceneLoader.LoadScene(Scenes.scene_level_house_elder_kettle, SceneLoader.Transition.Iris, SceneLoader.Transition.Iris, SceneLoader.Icon.Hourglass, null);
             }
             yield break;
         }
